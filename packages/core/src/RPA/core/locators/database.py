@@ -1,9 +1,13 @@
-import os
+import base64
 import io
 import json
 import logging
+import os
+import random
+import string
 from contextlib import contextmanager
-from RPA.core.locators import Locator
+from pathlib import Path
+from RPA.core.locators import Locator, BrowserDOM
 
 
 @contextmanager
@@ -12,11 +16,14 @@ def open_stream(obj, *args, **kwargs):
     existing IO streams.
     """
     try:
+        is_open = False
         if not isinstance(obj, io.IOBase):
             obj = open(obj, *args, **kwargs)
+            is_open = True
+
         yield obj
     finally:
-        if isinstance(obj, io.IOBase):
+        if is_open:
             obj.close()
 
 
@@ -81,18 +88,10 @@ class LocatorsDatabase:
             with open_stream(self.path, "r") as fd:
                 data = json.load(fd)
 
-            # Try to parse legacy database format
             if isinstance(data, list):
-                data = {fields["name"]: fields for fields in data if "name" in fields}
-
-            locators = {}
-            invalid = {}
-            for name, fields in data.items():
-                try:
-                    locators[name] = Locator.from_dict(fields)
-                except Exception as exc:  # pylint: disable=broad-except
-                    self.logger.warning('Failed to parse locator "%s": %s', name, exc)
-                    invalid[name] = fields
+                locators, invalid = self._migrate_data(data)
+            else:
+                locators, invalid = self._load(data)
 
             self.locators = locators
             self._invalid = invalid
@@ -119,3 +118,56 @@ class LocatorsDatabase:
 
         with open_stream(self.path, "w") as fd:
             json.dump(data, fd, sort_keys=True, indent=4)
+
+    def _load(self, data):
+        """Load database content as Locator objects."""
+        locators = {}
+        invalid = {}
+
+        for name, fields in data.items():
+            try:
+                locators[name] = Locator.from_dict(fields)
+            except Exception as exc:  # pylint: disable=broad-except
+                self.logger.warning('Failed to parse locator "%s": %s', name, exc)
+                invalid[name] = fields
+
+        return locators, invalid
+
+    def _migrate_data(self, data):
+        """Attempt to load database in legacy format."""
+        data = {fields["name"]: fields for fields in data if "name" in fields}
+
+        locators, invalid = self._load(data)
+
+        for locator in locators.values():
+            self._convert_screenshot(locator)
+
+        self.save()
+        self.logger.warning("Migrated locators database from legacy format")
+
+        return locators, invalid
+
+    def _convert_screenshot(self, locator):
+        """Migrate base64 screenshot to file."""
+        if not isinstance(locator, BrowserDOM):
+            return
+
+        if not locator.screenshot:
+            return
+
+        content = base64.b64decode(locator.screenshot)
+
+        images = Path(self.path).parent / ".images"
+        os.makedirs(images, exist_ok=True)
+
+        # Brute-force unique name
+        while True:
+            name = "".join(random.choice(string.hexdigits) for _ in range(8))
+            path = (images / name).with_suffix(".png")
+            if not path.exists():
+                break
+
+        with open(path, "wb") as fd:
+            fd.write(content)
+
+        locator.screenshot = path

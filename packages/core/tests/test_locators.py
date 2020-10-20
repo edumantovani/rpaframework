@@ -190,7 +190,7 @@ class TestDatabase:
         assert database.error is not None
         assert len(database.locators) == 0
 
-        database.path = to_stream(LEGACY)
+        database.path = to_stream(CURRENT)
         database.load()
 
         assert database.error is None

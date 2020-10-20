@@ -66,9 +66,8 @@ class Locator(metaclass=LocatorMeta):
 class ImageTemplate(Locator):
     """Image-based locator for template matching."""
 
-    strategy: str
-    value: str
-    source: str
+    path: Path
+    source: Optional[Path] = None  # TODO: Remove when crop is implemented
     confidence: float = 100.0
 
     @property
