@@ -51,8 +51,13 @@ class Locator(metaclass=LocatorMeta):
 
     def to_dict(self):
         """Convert locator instance to a dictionary with type information."""
-        data = asdict(self)
-        data["type"] = self.typename
+        data = {"type": self.typename}
+
+        for key, value in asdict(self).items():
+            if isinstance(value, Path):
+                value = str(value)
+            data[key] = value
+
         return data
 
     @property

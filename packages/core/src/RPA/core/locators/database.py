@@ -117,7 +117,8 @@ class LocatorsDatabase:
                 data[name] = fields
 
         with open_stream(self.path, "w") as fd:
-            json.dump(data, fd, sort_keys=True, indent=4)
+            output = json.dumps(data, sort_keys=True, indent=4)
+            fd.write(output)
 
     def _load(self, data):
         """Load database content as Locator objects."""
@@ -161,6 +162,7 @@ class LocatorsDatabase:
         os.makedirs(images, exist_ok=True)
 
         # Brute-force unique name
+        path = None
         while True:
             name = "".join(random.choice(string.hexdigits) for _ in range(8))
             path = (images / name).with_suffix(".png")
