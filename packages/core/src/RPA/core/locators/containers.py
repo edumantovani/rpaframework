@@ -71,6 +71,7 @@ class Locator(metaclass=LocatorMeta):
 class ImageTemplate(Locator):
     """Image-based locator for template matching."""
 
+    strategy: str
     path: Path
     source: Optional[Path] = None  # TODO: Remove when crop is implemented
     confidence: float = 100.0
@@ -84,7 +85,6 @@ class ImageTemplate(Locator):
 class BrowserDOM(Locator):
     """Browser-based locator for DOM elements."""
 
-    strategy: str
     value: str
     source: Optional[str] = None
     screenshot: Optional[Path] = None

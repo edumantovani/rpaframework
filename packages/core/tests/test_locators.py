@@ -56,7 +56,7 @@ CURRENT = {
         "strategy": "class",
         "value": "btn-primary",
         "source": "https://robotsparebinindustries.com/",
-    },
+    }
 }
 
 
@@ -125,6 +125,17 @@ class TestLocators:
 
         with pytest.raises(ValueError):
             Locator.from_dict(data)
+
+    def test_from_dict_image_template(self):
+        data = {
+            "type": "image",
+            "path": "images/TestTemplate.png",
+            "source": "images/TestSource.png",
+        }
+        locator = Locator.from_dict(data) 
+        assert isinstance(locator, ImageTemplate)
+        assert locator.path == "images/TestTemplate.png"
+        assert locator.source == "images/TestSource.png"
 
 
 class TestDatabase:
